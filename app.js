@@ -133,22 +133,39 @@ async function fetchPromos() {
 }
 
 async function fetchArticles() {
-  const snap = await db.collection('articles').orderBy('createdAt','desc').get().catch(()=>({docs:[]}));
-  allArticles = snap.docs.map(d => ({ _id: d.id, ...d.data() }));
+  // Use real-time listener so new articles appear immediately
+  db.collection('articles').orderBy('createdAt','desc').onSnapshot(snap => {
+    allArticles = snap.docs.map(d => ({ _id: d.id, ...d.data() }));
+    // Re-render if the articles section is currently visible
+    const sec = document.getElementById('section-articles');
+    if (sec && !sec.classList.contains('hidden')) renderArticles();
+  }, () => {
+    // Fallback to one-time fetch if listener fails
+    db.collection('articles').orderBy('createdAt','desc').get().then(s => {
+      allArticles = s.docs.map(d => ({ _id: d.id, ...d.data() }));
+    }).catch(()=>{});
+  });
 }
 
 async function fetchProducts() {
   const snap = await db.collection('products').get().catch(()=>({docs:[]}));
   allProducts = snap.docs.map(d => ({ _id: d.id, ...d.data() }));
   if (!allProducts.length) {
-    // seed from localStorage as fallback label
     allProducts = JSON.parse(localStorage.getItem('qs_products') || '[]');
   }
 }
 
 async function fetchCategories() {
-  const snap = await db.collection('categories').orderBy('order').get().catch(()=>({docs:[]}));
-  allCategories = snap.docs.map(d => ({ _id: d.id, ...d.data() }));
+  // Use real-time listener so new categories appear immediately
+  db.collection('categories').orderBy('order').onSnapshot(snap => {
+    allCategories = snap.docs.map(d => ({ _id: d.id, ...d.data() }));
+    const sec = document.getElementById('section-categories');
+    if (sec && !sec.classList.contains('hidden')) renderCategoriesTable();
+  }, () => {
+    db.collection('categories').orderBy('order').get().then(s => {
+      allCategories = s.docs.map(d => ({ _id: d.id, ...d.data() }));
+    }).catch(()=>{});
+  });
 }
 
 // ===== NAVIGATION =====
@@ -165,8 +182,8 @@ function goToSection(name) {
   if (name === 'customers') renderCustomersTable();
   if (name === 'promos')    renderPromos();
   if (name === 'articles')  renderArticles();
-  if (name === 'products')  renderProductsTable();
-  if (name === 'categories')renderCategoriesTable();
+  if (name === 'products')  { fetchProducts().then(() => renderProductsTable()); }
+  if (name === 'categories'){ renderCategoriesTable(); }
   if (window.innerWidth < 768) document.getElementById('sidebar').classList.remove('open');
 }
 
@@ -622,9 +639,19 @@ function populateCategoryDropdown(selectId) {
   const sel = document.getElementById(selectId);
   if (!sel) return;
   const currentVal = sel.value;
-  sel.innerHTML = '<option value="">Select Category</option>' + 
-    allCategories.map(c => `<option value="${c.name}">${c.emoji} ${c.name}</option>`).join('');
-  sel.value = currentVal;
+
+  // Use Firebase categories if they exist, else fall back to unique cats from products
+  let cats = [];
+  if (allCategories.length > 0) {
+    cats = allCategories.map(c => ({ name: c.name, emoji: c.emoji || '' }));
+  } else {
+    const names = [...new Set(allProducts.map(p => p.category).filter(Boolean))];
+    cats = names.map(name => ({ name, emoji: '' }));
+  }
+
+  sel.innerHTML = '<option value="">Select Category</option>' +
+    cats.map(c => `<option value="${c.name}">${c.emoji ? c.emoji + ' ' : ''}${c.name}</option>`).join('');
+  if (currentVal) sel.value = currentVal;
 }
 
 function renderProductsTable() {
