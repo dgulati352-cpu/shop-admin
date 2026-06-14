@@ -702,7 +702,7 @@ function renderProductsTable() {
 }
 
 function openProductModal() {
-  populateCategoryDropdown('category-options');
+  populateCategoryDropdown('prod-category');
   document.getElementById('product-edit-id').value = '';
   document.getElementById('prod-name').value = '';
   document.getElementById('prod-category').value = '';
@@ -717,11 +717,18 @@ function openProductModal() {
 }
 
 function editProduct(id) {
-  populateCategoryDropdown('category-options');
+  populateCategoryDropdown('prod-category');
   const p = allProducts.find(x => x._id === id);
   if(!p) return;
   document.getElementById('product-edit-id').value = id;
   document.getElementById('prod-name').value = p.name || '';
+  
+  // if category isn't in dropdown, add it temporarily
+  const sel = document.getElementById('prod-category');
+  if(p.category && !Array.from(sel.options).find(o=>o.value===p.category)) {
+    sel.innerHTML += `<option value="${p.category}">${p.category}</option>`;
+  }
+  
   document.getElementById('prod-category').value = p.category || '';
   document.getElementById('prod-price').value = p.price || 0;
   document.getElementById('prod-mrp').value = p.mrp || '';
