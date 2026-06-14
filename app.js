@@ -50,16 +50,13 @@ async function bootAdmin() {
 // ===== FETCH =====
 async function fetchOrders() {
   try {
-    const snap = await db.collection('orders').orderBy('date','desc').get();
+    const snap = await db.collection('orders').get();
     allOrders = snap.docs.map(d => ({ _id: d.id, ...d.data() }));
+    // Sort newest first in JS (avoids needing a Firestore index)
+    allOrders.sort((a,b) => new Date(b.date||0) - new Date(a.date||0));
   } catch(e) {
-    console.warn('Orders fetch error:', e);
-    // fallback: try without orderBy (in case index missing)
-    try {
-      const snap2 = await db.collection('orders').get();
-      allOrders = snap2.docs.map(d => ({ _id: d.id, ...d.data() }));
-      allOrders.sort((a,b) => new Date(b.date||0) - new Date(a.date||0));
-    } catch(e2) { allOrders = []; }
+    console.error('Orders fetch error:', e.code, e.message);
+    allOrders = [];
   }
   updatePendingBadge();
 }
