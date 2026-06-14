@@ -10,6 +10,7 @@ const firebaseConfig = {
 
 firebase.initializeApp(firebaseConfig);
 const db = firebase.firestore();
+const storage = firebase.storage();
 
 // ===== ADMIN CREDENTIALS =====
 const ADMIN_EMAIL = "admin@quickshop.com";
@@ -454,6 +455,9 @@ function openArticleModal() {
   document.getElementById('article-author').value='';
   document.getElementById('article-published').checked=true;
   document.getElementById('article-modal-title').textContent='New Article';
+  document.getElementById('image-preview').style.display='none';
+  document.getElementById('image-preview').src='';
+  document.getElementById('article-file-input').value='';
   openModal('article-modal');
 }
 
@@ -468,6 +472,14 @@ function editArticle(id) {
   document.getElementById('article-author').value=a.author||'';
   document.getElementById('article-published').checked=!!a.published;
   document.getElementById('article-modal-title').textContent='Edit Article';
+  if (a.imageUrl) {
+    document.getElementById('image-preview').src=a.imageUrl;
+    document.getElementById('image-preview').style.display='block';
+  } else {
+    document.getElementById('image-preview').style.display='none';
+    document.getElementById('image-preview').src='';
+  }
+  document.getElementById('article-file-input').value='';
   openModal('article-modal');
 }
 
@@ -567,4 +579,100 @@ document.addEventListener('keydown', e => {
   if (e.key==='Enter' && document.getElementById('login-screen') && !document.getElementById('login-screen').classList.contains('hidden')) {
     adminLogin();
   }
+});
+
+// ===== INIT UPLOADS =====
+function initImageUploads() {
+  const dropZone = document.getElementById('image-drop-zone');
+  const fileInput = document.getElementById('article-file-input');
+  const imgPreview = document.getElementById('image-preview');
+  const urlInput = document.getElementById('article-image');
+  const progressText = document.getElementById('upload-progress');
+
+  if (!dropZone) return;
+
+  dropZone.addEventListener('click', () => fileInput.click());
+
+  dropZone.addEventListener('dragover', (e) => {
+    e.preventDefault();
+    dropZone.style.borderColor = 'var(--primary)';
+    dropZone.style.background = 'rgba(108, 92, 231, 0.1)';
+  });
+
+  ['dragleave', 'dragend'].forEach(type => {
+    dropZone.addEventListener(type, (e) => {
+      e.preventDefault();
+      dropZone.style.borderColor = 'var(--border)';
+      dropZone.style.background = 'var(--bg-input)';
+    });
+  });
+
+  dropZone.addEventListener('drop', (e) => {
+    e.preventDefault();
+    dropZone.style.borderColor = 'var(--border)';
+    dropZone.style.background = 'var(--bg-input)';
+    if (e.dataTransfer.files.length) {
+      handleImageUpload(e.dataTransfer.files[0]);
+    }
+  });
+
+  fileInput.addEventListener('change', (e) => {
+    if (e.target.files.length) {
+      handleImageUpload(e.target.files[0]);
+    }
+  });
+
+  async function handleImageUpload(file) {
+    if (!file.type.startsWith('image/')) {
+      toast('Please upload an image file', 'error');
+      return;
+    }
+
+    // Show preview immediately from local blob
+    const reader = new FileReader();
+    reader.onload = (e) => {
+      imgPreview.src = e.target.result;
+      imgPreview.style.display = 'block';
+    };
+    reader.readAsDataURL(file);
+
+    progressText.style.display = 'block';
+    progressText.textContent = 'Uploading... 0%';
+
+    try {
+      const storageRef = storage.ref('articles/' + Date.now() + '_' + file.name);
+      const task = storageRef.put(file);
+
+      task.on('state_changed', 
+        (snapshot) => {
+          const progress = (snapshot.bytesTransferred / snapshot.totalBytes) * 100;
+          progressText.textContent = 'Uploading... ' + Math.round(progress) + '%';
+        }, 
+        (error) => {
+          console.error(error);
+          toast('Upload failed: ' + error.message, 'error');
+          progressText.style.display = 'none';
+        }, 
+        async () => {
+          const downloadURL = await task.snapshot.ref.getDownloadURL();
+          urlInput.value = downloadURL;
+          progressText.textContent = 'Upload complete!';
+          progressText.style.color = '#00b894';
+          toast('Image uploaded successfully', 'success');
+          setTimeout(() => {
+            progressText.style.display = 'none';
+            progressText.style.color = 'var(--primary)';
+          }, 3000);
+        }
+      );
+    } catch (e) {
+      toast('Upload failed: ' + e.message, 'error');
+      progressText.style.display = 'none';
+    }
+  }
+}
+
+// Initialize things that rely on DOM elements
+document.addEventListener('DOMContentLoaded', () => {
+  initImageUploads();
 });
