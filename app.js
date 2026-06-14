@@ -453,10 +453,28 @@ function renderArticles() {
     </div>`).join('');
 }
 
+function populateArticleCategoryDropdown(selectedVal) {
+  const sel = document.getElementById('article-category');
+  if (!sel) return;
+  const defaults = ["Offers", "News", "Tips", "General"];
+  const existing = [...new Set(allArticles.map(a => a.category).filter(Boolean))];
+  const allCats = [...new Set([...defaults, ...existing])];
+  
+  sel.innerHTML = allCats.map(c => `<option value="${c}">${c}</option>`).join('');
+  if (selectedVal) {
+    if (!allCats.includes(selectedVal)) {
+      sel.innerHTML += `<option value="${selectedVal}">${selectedVal}</option>`;
+    }
+    sel.value = selectedVal;
+  } else {
+    sel.value = "General";
+  }
+}
+
 function openArticleModal() {
+  populateArticleCategoryDropdown(null);
   document.getElementById('article-edit-id').value='';
   document.getElementById('article-title').value='';
-  document.getElementById('article-category').value='';
   document.getElementById('article-image').value='';
   document.getElementById('article-content').value='';
   document.getElementById('article-author').value='';
@@ -471,9 +489,9 @@ function openArticleModal() {
 function editArticle(id) {
   const a = allArticles.find(x=>x._id===id);
   if (!a) return;
+  populateArticleCategoryDropdown(a.category);
   document.getElementById('article-edit-id').value=id;
   document.getElementById('article-title').value=a.title||'';
-  document.getElementById('article-category').value=a.category||'';
   document.getElementById('article-image').value=a.imageUrl||'';
   document.getElementById('article-content').value=a.content||'';
   document.getElementById('article-author').value=a.author||'';
