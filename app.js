@@ -42,20 +42,61 @@ function adminLogout() {
 
 // ===== BOOT =====
 async function bootAdmin() {
-  await Promise.all([fetchOrders(), fetchCustomers(), fetchPromos(), fetchArticles(), fetchProducts()]);
+  await fetchOrders();
+  await Promise.all([fetchCustomers(), fetchPromos(), fetchArticles(), fetchProducts()]);
   renderDashboard();
 }
 
 // ===== FETCH =====
 async function fetchOrders() {
-  const snap = await db.collection('orders').orderBy('date','desc').get().catch(()=>({docs:[]}));
-  allOrders = snap.docs.map(d => ({ _id: d.id, ...d.data() }));
+  try {
+    const snap = await db.collection('orders').orderBy('date','desc').get();
+    allOrders = snap.docs.map(d => ({ _id: d.id, ...d.data() }));
+  } catch(e) {
+    console.warn('Orders fetch error:', e);
+    // fallback: try without orderBy (in case index missing)
+    try {
+      const snap2 = await db.collection('orders').get();
+      allOrders = snap2.docs.map(d => ({ _id: d.id, ...d.data() }));
+      allOrders.sort((a,b) => new Date(b.date||0) - new Date(a.date||0));
+    } catch(e2) { allOrders = []; }
+  }
   updatePendingBadge();
 }
 
 async function fetchCustomers() {
-  const snap = await db.collection('customers').get().catch(()=>({docs:[]}));
-  allCustomers = snap.docs.map(d => ({ _id: d.id, ...d.data() }));
+  // Try the dedicated customers collection first
+  let firestoreCustomers = [];
+  try {
+    const snap = await db.collection('customers').get();
+    firestoreCustomers = snap.docs.map(d => ({ _id: d.id, ...d.data() }));
+  } catch(e) {
+    console.warn('Customers collection fetch error:', e);
+  }
+
+  // Always also derive customers from orders (covers users who ordered before Firestore save was added)
+  const orderCustomers = {};
+  allOrders.forEach(o => {
+    if (!o.customerEmail) return;
+    if (!orderCustomers[o.customerEmail]) {
+      orderCustomers[o.customerEmail] = {
+        _id: o.customerEmail,
+        name: o.customerName || '—',
+        email: o.customerEmail,
+        phone: o.customerPhone || '—',
+        address: o.address || '—',
+        joinedAt: o.date || null
+      };
+    }
+  });
+
+  // Merge: Firestore records take priority, orders fill gaps
+  const merged = { ...orderCustomers };
+  firestoreCustomers.forEach(c => {
+    if (c.email) merged[c.email] = { ...merged[c.email], ...c };
+  });
+
+  allCustomers = Object.values(merged);
 }
 
 async function fetchPromos() {
