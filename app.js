@@ -822,48 +822,62 @@ function initImageUploads() {
       return;
     }
 
-    // Show preview immediately from local blob
-    const reader = new FileReader();
-    reader.onload = (e) => {
-      imgPreview.src = e.target.result;
-      imgPreview.style.display = 'block';
-    };
-    reader.readAsDataURL(file);
-
     progressText.style.display = 'block';
-    progressText.textContent = 'Uploading... 0%';
+    progressText.textContent = 'Processing... 0%';
 
     try {
-      const storageRef = storage.ref('articles/' + Date.now() + '_' + file.name);
-      const task = storageRef.put(file);
+      const compressed = await compressImage(file, 800, 0.78, (pct) => {
+        progressText.textContent = `Processing... ${pct}%`;
+      });
 
-      task.on('state_changed', 
-        (snapshot) => {
-          const progress = (snapshot.bytesTransferred / snapshot.totalBytes) * 100;
-          progressText.textContent = 'Uploading... ' + Math.round(progress) + '%';
-        }, 
-        (error) => {
-          console.error(error);
-          toast('Upload failed: ' + error.message, 'error');
-          progressText.style.display = 'none';
-        }, 
-        async () => {
-          const downloadURL = await task.snapshot.ref.getDownloadURL();
-          urlInput.value = downloadURL;
-          progressText.textContent = 'Upload complete!';
-          progressText.style.color = '#00b894';
-          toast('Image uploaded successfully', 'success');
-          setTimeout(() => {
-            progressText.style.display = 'none';
-            progressText.style.color = 'var(--primary)';
-          }, 3000);
-        }
-      );
+      // Show preview
+      imgPreview.src = compressed;
+      imgPreview.style.display = 'block';
+
+      // Store base64 directly (no Firebase Storage needed)
+      urlInput.value = compressed;
+
+      progressText.textContent = 'Image ready ✓';
+      progressText.style.color = '#00b894';
+      toast('Image ready!', 'success');
+      setTimeout(() => {
+        progressText.style.display = 'none';
+        progressText.style.color = 'var(--primary)';
+      }, 2000);
     } catch (e) {
-      toast('Upload failed: ' + e.message, 'error');
+      toast('Could not process image: ' + e.message, 'error');
       progressText.style.display = 'none';
     }
   }
+}
+
+// Compress image to base64 using canvas (no external storage needed)
+function compressImage(file, maxWidth, quality, onProgress) {
+  return new Promise((resolve, reject) => {
+    const reader = new FileReader();
+    reader.onerror = reject;
+    reader.onload = (ev) => {
+      if (onProgress) onProgress(30);
+      const img = new Image();
+      img.onerror = reject;
+      img.onload = () => {
+        if (onProgress) onProgress(60);
+        const canvas = document.createElement('canvas');
+        let w = img.width, h = img.height;
+        if (w > maxWidth) { h = Math.round(h * maxWidth / w); w = maxWidth; }
+        canvas.width = w;
+        canvas.height = h;
+        const ctx = canvas.getContext('2d');
+        ctx.drawImage(img, 0, 0, w, h);
+        if (onProgress) onProgress(90);
+        const dataUrl = canvas.toDataURL('image/jpeg', quality);
+        if (onProgress) onProgress(100);
+        resolve(dataUrl);
+      };
+      img.src = ev.target.result;
+    };
+    reader.readAsDataURL(file);
+  });
 }
 
 // Initialize things that rely on DOM elements
