@@ -528,9 +528,10 @@ function editArticle(id) {
 async function saveArticle() {
   const title = document.getElementById('article-title').value.trim();
   if (!title) { toast('Title is required','error'); return; }
+  const category = document.getElementById('article-category').value.trim() || 'General';
   const data = {
     title,
-    category: document.getElementById('article-category').value.trim()||'General',
+    category,
     imageUrl: document.getElementById('article-image').value.trim()||null,
     content: document.getElementById('article-content').value.trim(),
     author: document.getElementById('article-author').value.trim()||'Admin',
@@ -549,9 +550,32 @@ async function saveArticle() {
     allArticles.unshift({ _id: ref.id, ...data });
     toast('Article published!');
   }
+
+  // Auto-create the article category in Firestore if it doesn't exist yet
+  // This ensures the storefront immediately shows this category section
+  await autoUpsertArticleCategory(category);
+
   closeModal('article-modal');
   renderArticles();
   renderDashboard();
+}
+
+async function autoUpsertArticleCategory(categoryName) {
+  if (!categoryName) return;
+  try {
+    const catId = categoryName.toLowerCase().replace(/[^a-z0-9]+/g, '-');
+    const ref = db.collection('article_categories').doc(catId);
+    const snap = await ref.get();
+    if (!snap.exists) {
+      await ref.set({
+        name: categoryName,
+        order: allArticles.filter(a => a.category === categoryName).length,
+        createdAt: firebase.firestore.FieldValue.serverTimestamp()
+      });
+    }
+  } catch(e) {
+    console.warn('Could not auto-create article category:', e);
+  }
 }
 
 async function deleteArticle(id) {
@@ -678,7 +702,7 @@ function renderProductsTable() {
 }
 
 function openProductModal() {
-  populateCategoryDropdown('prod-category');
+  populateCategoryDropdown('category-options');
   document.getElementById('product-edit-id').value = '';
   document.getElementById('prod-name').value = '';
   document.getElementById('prod-category').value = '';
@@ -693,18 +717,11 @@ function openProductModal() {
 }
 
 function editProduct(id) {
-  populateCategoryDropdown('prod-category');
+  populateCategoryDropdown('category-options');
   const p = allProducts.find(x => x._id === id);
   if(!p) return;
   document.getElementById('product-edit-id').value = id;
   document.getElementById('prod-name').value = p.name || '';
-  
-  // if category isn't in dropdown, add it temporarily
-  const sel = document.getElementById('prod-category');
-  if(p.category && !Array.from(sel.options).find(o=>o.value===p.category)) {
-    sel.innerHTML += `<option value="${p.category}">${p.category}</option>`;
-  }
-  
   document.getElementById('prod-category').value = p.category || '';
   document.getElementById('prod-price').value = p.price || 0;
   document.getElementById('prod-mrp').value = p.mrp || '';
@@ -748,8 +765,32 @@ async function saveProduct() {
     allProducts.unshift({ _id: ref.id, ...data });
     toast('Product created');
   }
+
+  // Auto-create category in Firestore if it doesn't exist
+  if (data.category) {
+    await autoUpsertCategory(data.category);
+  }
+
   closeModal('product-modal');
   renderProductsTable();
+}
+
+async function autoUpsertCategory(categoryName) {
+  try {
+    const exists = allCategories.find(c => c.name.toLowerCase() === categoryName.toLowerCase());
+    if (!exists) {
+      const data = {
+        name: categoryName,
+        emoji: '🛒',
+        order: allCategories.length + 1
+      };
+      const ref = await db.collection('categories').add(data);
+      // Wait for real-time listener to pick it up, or push locally:
+      // allCategories.push({ _id: ref.id, ...data });
+    }
+  } catch (e) {
+    console.warn('Auto-upsert category failed:', e);
+  }
 }
 
 async function deleteProduct(id) {
