@@ -1,0 +1,340 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>QuickShop Admin — Control Panel</title>
+  <meta name="description" content="QuickShop Admin Dashboard — Manage orders, customers, promo codes, and articles.">
+  <link rel="preconnect" href="https://fonts.googleapis.com">
+  <link href="https://fonts.googleapis.com/css2?family=Inter:wght@300;400;500;600;700;800;900&display=swap" rel="stylesheet">
+  <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.5.1/css/all.min.css">
+  <link rel="stylesheet" href="styles.css">
+</head>
+<body>
+
+  <!-- Login Screen -->
+  <div id="login-screen" class="login-screen">
+    <div class="login-card">
+      <div class="login-brand">
+        <div class="brand-icon"><i class="fas fa-bolt"></i></div>
+        <h1>Quick<span>Shop</span></h1>
+        <p>Admin Control Panel</p>
+      </div>
+      <div class="input-group">
+        <i class="fas fa-user-shield"></i>
+        <input type="email" id="admin-email" placeholder="Admin Email" value="admin@quickshop.com">
+      </div>
+      <div class="input-group">
+        <i class="fas fa-lock"></i>
+        <input type="password" id="admin-password" placeholder="Password" value="admin123">
+      </div>
+      <button class="btn-login" onclick="adminLogin()">
+        <i class="fas fa-sign-in-alt"></i> Sign In to Dashboard
+      </button>
+      <p class="login-hint">Default: admin@quickshop.com / admin123</p>
+    </div>
+  </div>
+
+  <!-- Main Admin Panel -->
+  <div id="admin-panel" class="hidden">
+
+    <!-- Sidebar -->
+    <aside id="sidebar" class="sidebar">
+      <div class="sidebar-brand" onclick="goToSection('dashboard')">
+        <div class="brand-icon-sm"><i class="fas fa-bolt"></i></div>
+        <span>Quick<b>Shop</b> Admin</span>
+      </div>
+
+      <nav class="sidebar-nav">
+        <a class="nav-item active" id="nav-dashboard" onclick="goToSection('dashboard')">
+          <i class="fas fa-chart-line"></i><span>Dashboard</span>
+        </a>
+        <a class="nav-item" id="nav-orders" onclick="goToSection('orders')">
+          <i class="fas fa-shopping-bag"></i><span>Orders</span>
+          <span class="nav-badge" id="pending-badge">0</span>
+        </a>
+        <a class="nav-item" id="nav-customers" onclick="goToSection('customers')">
+          <i class="fas fa-users"></i><span>Customers</span>
+        </a>
+        <a class="nav-item" id="nav-promos" onclick="goToSection('promos')">
+          <i class="fas fa-tags"></i><span>Promo Codes</span>
+        </a>
+        <a class="nav-item" id="nav-articles" onclick="goToSection('articles')">
+          <i class="fas fa-newspaper"></i><span>Articles</span>
+        </a>
+        <a class="nav-item" id="nav-products" onclick="goToSection('products')">
+          <i class="fas fa-box-open"></i><span>Products</span>
+        </a>
+      </nav>
+
+      <div class="sidebar-footer">
+        <button class="btn-logout" onclick="adminLogout()">
+          <i class="fas fa-sign-out-alt"></i> Logout
+        </button>
+      </div>
+    </aside>
+
+    <!-- Main Content -->
+    <main id="main-area" class="main-area">
+
+      <!-- Top Bar -->
+      <header class="topbar">
+        <button class="hamburger" onclick="toggleSidebar()"><i class="fas fa-bars"></i></button>
+        <div class="topbar-title" id="page-title">Dashboard</div>
+        <div class="topbar-right">
+          <div class="sync-status" id="sync-status">
+            <i class="fas fa-circle"></i> Live
+          </div>
+          <div class="admin-avatar">A</div>
+        </div>
+      </header>
+
+      <!-- Toast -->
+      <div id="toast-container"></div>
+
+      <!-- ===== DASHBOARD SECTION ===== -->
+      <section id="section-dashboard" class="section active">
+        <div class="stats-grid">
+          <div class="stat-card stat-blue">
+            <div class="stat-icon"><i class="fas fa-shopping-bag"></i></div>
+            <div class="stat-info">
+              <div class="stat-number" id="stat-total-orders">0</div>
+              <div class="stat-label">Total Orders</div>
+            </div>
+          </div>
+          <div class="stat-card stat-green">
+            <div class="stat-icon"><i class="fas fa-rupee-sign"></i></div>
+            <div class="stat-info">
+              <div class="stat-number" id="stat-revenue">₹0</div>
+              <div class="stat-label">Total Revenue</div>
+            </div>
+          </div>
+          <div class="stat-card stat-orange">
+            <div class="stat-icon"><i class="fas fa-clock"></i></div>
+            <div class="stat-info">
+              <div class="stat-number" id="stat-pending">0</div>
+              <div class="stat-label">Pending Orders</div>
+            </div>
+          </div>
+          <div class="stat-card stat-purple">
+            <div class="stat-icon"><i class="fas fa-users"></i></div>
+            <div class="stat-info">
+              <div class="stat-number" id="stat-customers">0</div>
+              <div class="stat-label">Customers</div>
+            </div>
+          </div>
+        </div>
+
+        <div class="dashboard-grid">
+          <div class="card">
+            <div class="card-header">
+              <h3><i class="fas fa-fire"></i> Recent Orders</h3>
+              <button class="btn-sm" onclick="goToSection('orders')">View All</button>
+            </div>
+            <div id="recent-orders-table" class="table-wrapper">
+              <div class="loading-state"><i class="fas fa-spinner fa-spin"></i> Loading...</div>
+            </div>
+          </div>
+          <div class="card">
+            <div class="card-header">
+              <h3><i class="fas fa-newspaper"></i> Latest Articles</h3>
+              <button class="btn-sm" onclick="goToSection('articles')">Manage</button>
+            </div>
+            <div id="dashboard-articles-list">
+              <div class="loading-state"><i class="fas fa-spinner fa-spin"></i> Loading...</div>
+            </div>
+          </div>
+        </div>
+      </section>
+
+      <!-- ===== ORDERS SECTION ===== -->
+      <section id="section-orders" class="section hidden">
+        <div class="section-header">
+          <h2>Order Management</h2>
+          <div class="filter-row">
+            <select id="order-filter-status" onchange="renderOrdersTable()">
+              <option value="">All Statuses</option>
+              <option value="Pending">Pending</option>
+              <option value="Processing">Processing</option>
+              <option value="Delivered">Delivered</option>
+              <option value="Cancelled">Cancelled</option>
+            </select>
+            <input type="text" id="order-search" placeholder="Search by ID or name..." oninput="renderOrdersTable()">
+          </div>
+        </div>
+        <div class="card">
+          <div id="orders-table-container" class="table-wrapper">
+            <div class="loading-state"><i class="fas fa-spinner fa-spin"></i> Loading orders...</div>
+          </div>
+        </div>
+      </section>
+
+      <!-- ===== CUSTOMERS SECTION ===== -->
+      <section id="section-customers" class="section hidden">
+        <div class="section-header">
+          <h2>Customer Data</h2>
+          <input type="text" id="customer-search" placeholder="Search customers..." oninput="renderCustomersTable()">
+        </div>
+        <div class="card">
+          <div id="customers-table-container" class="table-wrapper">
+            <div class="loading-state"><i class="fas fa-spinner fa-spin"></i> Loading customers...</div>
+          </div>
+        </div>
+      </section>
+
+      <!-- ===== PROMO CODES SECTION ===== -->
+      <section id="section-promos" class="section hidden">
+        <div class="section-header">
+          <h2>Promo Codes</h2>
+          <button class="btn-primary" onclick="openPromoModal()">
+            <i class="fas fa-plus"></i> New Promo Code
+          </button>
+        </div>
+        <div class="card">
+          <div id="promos-table-container" class="table-wrapper">
+            <div class="loading-state"><i class="fas fa-spinner fa-spin"></i> Loading...</div>
+          </div>
+        </div>
+      </section>
+
+      <!-- ===== ARTICLES SECTION ===== -->
+      <section id="section-articles" class="section hidden">
+        <div class="section-header">
+          <h2>Articles & News</h2>
+          <button class="btn-primary" onclick="openArticleModal()">
+            <i class="fas fa-plus"></i> New Article
+          </button>
+        </div>
+        <div id="articles-grid" class="articles-grid">
+          <div class="loading-state"><i class="fas fa-spinner fa-spin"></i> Loading articles...</div>
+        </div>
+      </section>
+
+      <!-- ===== PRODUCTS SECTION ===== -->
+      <section id="section-products" class="section hidden">
+        <div class="section-header">
+          <h2>Products</h2>
+          <input type="text" id="product-search" placeholder="Search products..." oninput="renderProductsTable()">
+        </div>
+        <div class="card">
+          <div id="products-table-container" class="table-wrapper">
+            <div class="loading-state"><i class="fas fa-spinner fa-spin"></i> Loading...</div>
+          </div>
+        </div>
+      </section>
+
+    </main>
+  </div>
+
+  <!-- Order Detail Modal -->
+  <div id="order-modal" class="modal hidden">
+    <div class="modal-content">
+      <div class="modal-header">
+        <h3><i class="fas fa-shopping-bag"></i> Order Details</h3>
+        <button class="close-btn" onclick="closeModal('order-modal')"><i class="fas fa-times"></i></button>
+      </div>
+      <div id="order-modal-body" class="modal-body"></div>
+    </div>
+  </div>
+
+  <!-- Promo Modal -->
+  <div id="promo-modal" class="modal hidden">
+    <div class="modal-content" style="max-width:500px;">
+      <div class="modal-header">
+        <h3><i class="fas fa-tag"></i> <span id="promo-modal-title">New Promo Code</span></h3>
+        <button class="close-btn" onclick="closeModal('promo-modal')"><i class="fas fa-times"></i></button>
+      </div>
+      <div class="modal-body">
+        <div class="form-grid">
+          <div class="input-group">
+            <i class="fas fa-code"></i>
+            <input type="text" id="promo-code" placeholder="PROMO CODE (e.g. SAVE20)" style="text-transform:uppercase;">
+          </div>
+          <div class="input-group">
+            <i class="fas fa-percent"></i>
+            <input type="number" id="promo-discount" placeholder="Discount %" min="1" max="100">
+          </div>
+          <div class="input-group">
+            <i class="fas fa-rupee-sign"></i>
+            <input type="number" id="promo-min-order" placeholder="Minimum Order Amount (₹)">
+          </div>
+          <div class="input-group">
+            <i class="fas fa-calendar-alt"></i>
+            <input type="date" id="promo-expiry" placeholder="Expiry Date">
+          </div>
+          <div class="input-group" style="grid-column:1/-1;">
+            <i class="fas fa-info-circle"></i>
+            <input type="text" id="promo-description" placeholder="Description (optional)">
+          </div>
+        </div>
+        <input type="hidden" id="promo-edit-id">
+        <button class="btn-primary" style="width:100%;margin-top:16px;" onclick="savePromo()">
+          <i class="fas fa-save"></i> Save Promo Code
+        </button>
+      </div>
+    </div>
+  </div>
+
+  <!-- Article Modal -->
+  <div id="article-modal" class="modal hidden">
+    <div class="modal-content" style="max-width:640px;">
+      <div class="modal-header">
+        <h3><i class="fas fa-newspaper"></i> <span id="article-modal-title">New Article</span></h3>
+        <button class="close-btn" onclick="closeModal('article-modal')"><i class="fas fa-times"></i></button>
+      </div>
+      <div class="modal-body">
+        <div class="form-grid">
+          <div class="input-group" style="grid-column:1/-1;">
+            <i class="fas fa-heading"></i>
+            <input type="text" id="article-title" placeholder="Article Title">
+          </div>
+          <div class="input-group" style="grid-column:1/-1;">
+            <i class="fas fa-tag"></i>
+            <input type="text" id="article-category" placeholder="Category (e.g. Offers, News, Tips)">
+          </div>
+          <div class="input-group" style="grid-column:1/-1;">
+            <i class="fas fa-image"></i>
+            <input type="text" id="article-image" placeholder="Image URL (optional)">
+          </div>
+          <div style="grid-column:1/-1;">
+            <label style="font-size:13px;font-weight:600;color:var(--text-muted);display:block;margin-bottom:8px;">Content</label>
+            <textarea id="article-content" rows="6" placeholder="Write your article content here..." style="width:100%;padding:14px;border:1.5px solid var(--border);border-radius:10px;font-family:inherit;font-size:14px;resize:vertical;background:var(--bg-input);color:var(--text-primary);outline:none;transition:border 0.2s;box-sizing:border-box;"></textarea>
+          </div>
+          <div class="input-group">
+            <i class="fas fa-user-edit"></i>
+            <input type="text" id="article-author" placeholder="Author Name">
+          </div>
+          <div style="display:flex;align-items:center;gap:10px;padding:10px 0;">
+            <label style="font-size:14px;font-weight:500;">Published</label>
+            <label class="toggle-switch">
+              <input type="checkbox" id="article-published" checked>
+              <span class="toggle-slider"></span>
+            </label>
+          </div>
+        </div>
+        <input type="hidden" id="article-edit-id">
+        <button class="btn-primary" style="width:100%;margin-top:16px;" onclick="saveArticle()">
+          <i class="fas fa-save"></i> Publish Article
+        </button>
+      </div>
+    </div>
+  </div>
+
+  <!-- Customer Detail Modal -->
+  <div id="customer-modal" class="modal hidden">
+    <div class="modal-content" style="max-width:540px;">
+      <div class="modal-header">
+        <h3><i class="fas fa-user"></i> Customer Details</h3>
+        <button class="close-btn" onclick="closeModal('customer-modal')"><i class="fas fa-times"></i></button>
+      </div>
+      <div id="customer-modal-body" class="modal-body"></div>
+    </div>
+  </div>
+
+  <!-- Firebase SDKs -->
+  <script src="https://www.gstatic.com/firebasejs/10.9.0/firebase-app-compat.js"></script>
+  <script src="https://www.gstatic.com/firebasejs/10.9.0/firebase-auth-compat.js"></script>
+  <script src="https://www.gstatic.com/firebasejs/10.9.0/firebase-firestore-compat.js"></script>
+  <script src="app.js"></script>
+</body>
+</html>

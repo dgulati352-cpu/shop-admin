@@ -1,0 +1,10 @@
+{
+  "name": "quickshop-admin",
+  "version": "1.0.0",
+  "description": "QuickShop Admin Panel",
+  "scripts": {
+    "dev": "npx -y serve .",
+    "start": "npx -y serve ."
+  },
+  "license": "ISC"
+}
