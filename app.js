@@ -42,33 +42,37 @@ function adminLogout() {
 
 // ===== BOOT =====
 async function bootAdmin() {
-  toast('Connecting to database...', 'info');
+  // Test DB connection first
+  try {
+    await db.collection('_ping').doc('test').set({ ts: Date.now() });
+    toast('Database connected ✓', 'success');
+  } catch(e) {
+    toast('DB connection failed: ' + e.message, 'error');
+    console.error('DB test failed:', e);
+  }
   listenToOrders(); // real-time listener
   await Promise.all([fetchCustomers(), fetchPromos(), fetchArticles(), fetchProducts()]);
   renderDashboard();
 }
 
 // ===== REAL-TIME ORDERS LISTENER =====
+let _snapshotCount = 0;
 function listenToOrders() {
   db.collection('orders').onSnapshot(snap => {
     allOrders = snap.docs.map(d => ({ _id: d.id, ...d.data() }));
     allOrders.sort((a,b) => new Date(b.date||0) - new Date(a.date||0));
     updatePendingBadge();
     renderDashboard();
-    // refresh orders table if it's open
-    if (document.getElementById('section-orders').classList.contains('active')) {
-      renderOrdersTable();
-    }
-    // refresh customers (derived from orders)
+    if (document.getElementById('section-orders').classList.contains('active')) renderOrdersTable();
     fetchCustomers().then(() => {
-      if (document.getElementById('section-customers').classList.contains('active')) {
-        renderCustomersTable();
-      }
+      if (document.getElementById('section-customers').classList.contains('active')) renderCustomersTable();
     });
-    toast(`${snap.docs.length} order(s) loaded`, 'info');
+    // Only toast on first load or when count changes
+    _snapshotCount++;
+    if (_snapshotCount === 1) toast(`${snap.docs.length} order(s) found`, snap.docs.length ? 'success' : 'info');
   }, err => {
     console.error('Orders listener error:', err.code, err.message);
-    toast('DB error: ' + err.message, 'error');
+    toast('Orders error: ' + err.code + ' — ' + err.message, 'error');
   });
 }
 
