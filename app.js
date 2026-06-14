@@ -42,20 +42,45 @@ function adminLogout() {
 
 // ===== BOOT =====
 async function bootAdmin() {
-  await fetchOrders();
+  toast('Connecting to database...', 'info');
+  listenToOrders(); // real-time listener
   await Promise.all([fetchCustomers(), fetchPromos(), fetchArticles(), fetchProducts()]);
   renderDashboard();
 }
 
-// ===== FETCH =====
+// ===== REAL-TIME ORDERS LISTENER =====
+function listenToOrders() {
+  db.collection('orders').onSnapshot(snap => {
+    allOrders = snap.docs.map(d => ({ _id: d.id, ...d.data() }));
+    allOrders.sort((a,b) => new Date(b.date||0) - new Date(a.date||0));
+    updatePendingBadge();
+    renderDashboard();
+    // refresh orders table if it's open
+    if (document.getElementById('section-orders').classList.contains('active')) {
+      renderOrdersTable();
+    }
+    // refresh customers (derived from orders)
+    fetchCustomers().then(() => {
+      if (document.getElementById('section-customers').classList.contains('active')) {
+        renderCustomersTable();
+      }
+    });
+    toast(`${snap.docs.length} order(s) loaded`, 'info');
+  }, err => {
+    console.error('Orders listener error:', err.code, err.message);
+    toast('DB error: ' + err.message, 'error');
+  });
+}
+
+// kept for manual refresh
 async function fetchOrders() {
   try {
     const snap = await db.collection('orders').get();
     allOrders = snap.docs.map(d => ({ _id: d.id, ...d.data() }));
-    // Sort newest first in JS (avoids needing a Firestore index)
     allOrders.sort((a,b) => new Date(b.date||0) - new Date(a.date||0));
   } catch(e) {
     console.error('Orders fetch error:', e.code, e.message);
+    toast('Orders fetch failed: ' + e.message, 'error');
     allOrders = [];
   }
   updatePendingBadge();
