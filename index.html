@@ -56,6 +56,9 @@
         <a class="nav-item" id="nav-customers" onclick="goToSection('customers')">
           <i class="fas fa-users"></i><span>Customers</span>
         </a>
+        <a class="nav-item" id="nav-categories" onclick="goToSection('categories')">
+          <i class="fas fa-folder-open"></i><span>Categories</span>
+        </a>
         <a class="nav-item" id="nav-promos" onclick="goToSection('promos')">
           <i class="fas fa-tags"></i><span>Promo Codes</span>
         </a>
@@ -182,6 +185,21 @@
         </div>
       </section>
 
+      <!-- ===== CATEGORIES SECTION ===== -->
+      <section id="section-categories" class="section hidden">
+        <div class="section-header">
+          <h2>Product Categories</h2>
+          <button class="btn-primary" onclick="openCategoryModal()">
+            <i class="fas fa-plus"></i> New Category
+          </button>
+        </div>
+        <div class="card">
+          <div id="categories-table-container" class="table-wrapper">
+            <div class="loading-state"><i class="fas fa-spinner fa-spin"></i> Loading...</div>
+          </div>
+        </div>
+      </section>
+
       <!-- ===== PROMO CODES SECTION ===== -->
       <section id="section-promos" class="section hidden">
         <div class="section-header">
@@ -214,7 +232,12 @@
       <section id="section-products" class="section hidden">
         <div class="section-header">
           <h2>Products</h2>
-          <input type="text" id="product-search" placeholder="Search products..." oninput="renderProductsTable()">
+          <div class="filter-row">
+            <input type="text" id="product-search" placeholder="Search products..." oninput="renderProductsTable()">
+            <button class="btn-primary" onclick="openProductModal()">
+              <i class="fas fa-plus"></i> New Product
+            </button>
+          </div>
         </div>
         <div class="card">
           <div id="products-table-container" class="table-wrapper">
@@ -224,6 +247,88 @@
       </section>
 
     </main>
+  </div>
+
+  <!-- Category Modal -->
+  <div id="category-modal" class="modal hidden">
+    <div class="modal-content" style="max-width:500px;">
+      <div class="modal-header">
+        <h3><i class="fas fa-folder"></i> <span id="category-modal-title">New Category</span></h3>
+        <button class="close-btn" onclick="closeModal('category-modal')"><i class="fas fa-times"></i></button>
+      </div>
+      <div class="modal-body">
+        <div class="form-grid">
+          <div class="input-group" style="grid-column:1/-1;">
+            <i class="fas fa-heading"></i>
+            <input type="text" id="cat-name" placeholder="Category Name (e.g. Fruits & Vegetables)">
+          </div>
+          <div class="input-group" style="grid-column:1/-1;">
+            <i class="fas fa-smile"></i>
+            <input type="text" id="cat-emoji" placeholder="Emoji (e.g. 🍎)">
+          </div>
+          <div class="input-group" style="grid-column:1/-1;">
+            <i class="fas fa-sort-numeric-down"></i>
+            <input type="number" id="cat-order" placeholder="Sort Order (e.g. 1)" value="1">
+          </div>
+        </div>
+        <input type="hidden" id="category-edit-id">
+        <button class="btn-primary" style="width:100%;margin-top:16px;" onclick="saveCategory()">
+          <i class="fas fa-save"></i> Save Category
+        </button>
+      </div>
+    </div>
+  </div>
+
+  <!-- Product Modal -->
+  <div id="product-modal" class="modal hidden">
+    <div class="modal-content" style="max-width:600px;">
+      <div class="modal-header">
+        <h3><i class="fas fa-box-open"></i> <span id="product-modal-title">New Product</span></h3>
+        <button class="close-btn" onclick="closeModal('product-modal')"><i class="fas fa-times"></i></button>
+      </div>
+      <div class="modal-body">
+        <div class="form-grid">
+          <div class="input-group" style="grid-column:1/-1;">
+            <i class="fas fa-box"></i>
+            <input type="text" id="prod-name" placeholder="Product Name">
+          </div>
+          <div class="input-group" style="grid-column:1/-1;">
+            <i class="fas fa-folder"></i>
+            <select id="prod-category">
+              <option value="">Select Category</option>
+            </select>
+          </div>
+          <div class="input-group">
+            <i class="fas fa-rupee-sign"></i>
+            <input type="number" id="prod-price" placeholder="Sale Price (₹)">
+          </div>
+          <div class="input-group">
+            <i class="fas fa-tag"></i>
+            <input type="number" id="prod-mrp" placeholder="MRP (₹)">
+          </div>
+          <div class="input-group">
+            <i class="fas fa-weight"></i>
+            <input type="text" id="prod-unit" placeholder="Unit (e.g. 1 kg, 4 pcs)">
+          </div>
+          <div class="input-group">
+            <i class="fas fa-boxes"></i>
+            <input type="number" id="prod-stock" placeholder="Stock Quantity">
+          </div>
+          <div class="input-group" style="grid-column:1/-1;">
+            <i class="fas fa-smile"></i>
+            <input type="text" id="prod-emoji" placeholder="Emoji (e.g. 🍎)">
+          </div>
+          <div style="grid-column:1/-1;">
+            <label style="font-size:13px;font-weight:600;color:var(--text-muted);display:block;margin-bottom:8px;">Description</label>
+            <textarea id="prod-desc" rows="3" placeholder="Product description..." style="width:100%;padding:14px;border:1.5px solid var(--border);border-radius:10px;font-family:inherit;font-size:14px;resize:vertical;background:var(--bg-input);color:var(--text-primary);outline:none;box-sizing:border-box;"></textarea>
+          </div>
+        </div>
+        <input type="hidden" id="product-edit-id">
+        <button class="btn-primary" style="width:100%;margin-top:16px;" onclick="saveProduct()">
+          <i class="fas fa-save"></i> Save Product
+        </button>
+      </div>
+    </div>
   </div>
 
   <!-- Order Detail Modal -->

@@ -22,6 +22,7 @@ let allCustomers = [];
 let allPromos    = [];
 let allArticles  = [];
 let allProducts  = [];
+let allCategories= [];
 
 // ===== AUTH =====
 function adminLogin() {
@@ -52,7 +53,7 @@ async function bootAdmin() {
     console.error('DB test failed:', e);
   }
   listenToOrders(); // real-time listener
-  await Promise.all([fetchCustomers(), fetchPromos(), fetchArticles(), fetchProducts()]);
+  await Promise.all([fetchCustomers(), fetchPromos(), fetchArticles(), fetchProducts(), fetchCategories()]);
   renderDashboard();
 }
 
@@ -145,6 +146,11 @@ async function fetchProducts() {
   }
 }
 
+async function fetchCategories() {
+  const snap = await db.collection('categories').orderBy('order').get().catch(()=>({docs:[]}));
+  allCategories = snap.docs.map(d => ({ _id: d.id, ...d.data() }));
+}
+
 // ===== NAVIGATION =====
 function goToSection(name) {
   document.querySelectorAll('.section').forEach(s => { s.classList.add('hidden'); s.classList.remove('active'); });
@@ -160,6 +166,7 @@ function goToSection(name) {
   if (name === 'promos')    renderPromos();
   if (name === 'articles')  renderArticles();
   if (name === 'products')  renderProductsTable();
+  if (name === 'categories')renderCategoriesTable();
   if (window.innerWidth < 768) document.getElementById('sidebar').classList.remove('open');
 }
 
@@ -520,7 +527,88 @@ async function deleteArticle(id) {
   renderArticles();
 }
 
+// ===== CATEGORIES =====
+function renderCategoriesTable() {
+  const c = document.getElementById('categories-table-container');
+  if (!allCategories.length) { c.innerHTML = emptyState('No categories found'); return; }
+  c.innerHTML = `<table>
+    <thead><tr><th>Emoji</th><th>Name</th><th>Sort Order</th><th>Actions</th></tr></thead>
+    <tbody>${allCategories.map(cat=>`<tr>
+      <td style="font-size:24px">${cat.emoji||''}</td>
+      <td class="table-name">${cat.name}</td>
+      <td>${cat.order||1}</td>
+      <td>
+        <button class="btn-icon" onclick="editCategory('${cat._id}')"><i class="fas fa-edit"></i></button>
+        <button class="btn-icon danger" onclick="deleteCategory('${cat._id}')"><i class="fas fa-trash"></i></button>
+      </td>
+    </tr>`).join('')}</tbody>
+  </table>`;
+}
+
+function openCategoryModal() {
+  document.getElementById('category-edit-id').value = '';
+  document.getElementById('cat-name').value = '';
+  document.getElementById('cat-emoji').value = '';
+  document.getElementById('cat-order').value = '1';
+  document.getElementById('category-modal-title').textContent = 'New Category';
+  openModal('category-modal');
+}
+
+function editCategory(id) {
+  const c = allCategories.find(x => x._id === id);
+  if(!c) return;
+  document.getElementById('category-edit-id').value = id;
+  document.getElementById('cat-name').value = c.name || '';
+  document.getElementById('cat-emoji').value = c.emoji || '';
+  document.getElementById('cat-order').value = c.order || 1;
+  document.getElementById('category-modal-title').textContent = 'Edit Category';
+  openModal('category-modal');
+}
+
+async function saveCategory() {
+  const name = document.getElementById('cat-name').value.trim();
+  if(!name) { toast('Category name required', 'error'); return; }
+  
+  const data = {
+    name,
+    emoji: document.getElementById('cat-emoji').value.trim(),
+    order: parseInt(document.getElementById('cat-order').value) || 1
+  };
+
+  const editId = document.getElementById('category-edit-id').value;
+  if (editId) {
+    await db.collection('categories').doc(editId).update(data);
+    const idx = allCategories.findIndex(x=>x._id===editId);
+    if(idx!==-1) allCategories[idx] = { _id:editId, ...data };
+    toast('Category updated');
+  } else {
+    const ref = await db.collection('categories').add(data);
+    allCategories.push({ _id: ref.id, ...data });
+    toast('Category created');
+  }
+  allCategories.sort((a,b)=>a.order - b.order);
+  closeModal('category-modal');
+  renderCategoriesTable();
+}
+
+async function deleteCategory(id) {
+  if(!confirm('Delete this category? Products in it will still exist but may not display.')) return;
+  await db.collection('categories').doc(id).delete();
+  allCategories = allCategories.filter(x => x._id !== id);
+  toast('Category deleted');
+  renderCategoriesTable();
+}
+
 // ===== PRODUCTS =====
+function populateCategoryDropdown(selectId) {
+  const sel = document.getElementById(selectId);
+  if (!sel) return;
+  const currentVal = sel.value;
+  sel.innerHTML = '<option value="">Select Category</option>' + 
+    allCategories.map(c => `<option value="${c.name}">${c.emoji} ${c.name}</option>`).join('');
+  sel.value = currentVal;
+}
+
 function renderProductsTable() {
   const search = (document.getElementById('product-search').value||'').toLowerCase();
   let prods = allProducts;
@@ -528,17 +616,105 @@ function renderProductsTable() {
   const c = document.getElementById('products-table-container');
   if (!prods.length) { c.innerHTML = emptyState('No products found'); return; }
   c.innerHTML = `<table>
-    <thead><tr><th>Emoji</th><th>Name</th><th>Category</th><th>Price</th><th>MRP</th><th>Stock</th></tr></thead>
+    <thead><tr><th>Emoji</th><th>Name</th><th>Category</th><th>Price</th><th>MRP</th><th>Stock</th><th>Actions</th></tr></thead>
     <tbody>${prods.map(p=>`<tr>
       <td style="font-size:24px">${p.emoji||'🛒'}</td>
       <td class="table-name">${p.name}</td>
       <td>${p.category||'—'}</td>
-      <td style="font-weight:700;color:#10b981">₹${p.price}</td>
-      <td style="text-decoration:line-through;color:var(--text-muted)">₹${p.mrp||p.price}</td>
+      <td style="font-weight:700;color:#10b981">₹${p.price||0}</td>
+      <td style="text-decoration:line-through;color:var(--text-muted)">₹${p.mrp||p.price||0}</td>
       <td><span class="badge-status ${p.stock>0?'badge-active':'badge-expired'}">${p.stock||0}</span></td>
+      <td>
+        <button class="btn-icon" onclick="editProduct('${p._id}')"><i class="fas fa-edit"></i></button>
+        <button class="btn-icon danger" onclick="deleteProduct('${p._id}')"><i class="fas fa-trash"></i></button>
+      </td>
     </tr>`).join('')}</tbody>
   </table>`;
 }
+
+function openProductModal() {
+  populateCategoryDropdown('prod-category');
+  document.getElementById('product-edit-id').value = '';
+  document.getElementById('prod-name').value = '';
+  document.getElementById('prod-category').value = '';
+  document.getElementById('prod-price').value = '';
+  document.getElementById('prod-mrp').value = '';
+  document.getElementById('prod-unit').value = '';
+  document.getElementById('prod-stock').value = '100';
+  document.getElementById('prod-emoji').value = '';
+  document.getElementById('prod-desc').value = '';
+  document.getElementById('product-modal-title').textContent = 'New Product';
+  openModal('product-modal');
+}
+
+function editProduct(id) {
+  populateCategoryDropdown('prod-category');
+  const p = allProducts.find(x => x._id === id);
+  if(!p) return;
+  document.getElementById('product-edit-id').value = id;
+  document.getElementById('prod-name').value = p.name || '';
+  
+  // if category isn't in dropdown, add it temporarily
+  const sel = document.getElementById('prod-category');
+  if(p.category && !Array.from(sel.options).find(o=>o.value===p.category)) {
+    sel.innerHTML += `<option value="${p.category}">${p.category}</option>`;
+  }
+  
+  document.getElementById('prod-category').value = p.category || '';
+  document.getElementById('prod-price').value = p.price || 0;
+  document.getElementById('prod-mrp').value = p.mrp || '';
+  document.getElementById('prod-unit').value = p.unit || '';
+  document.getElementById('prod-stock').value = p.stock || 0;
+  document.getElementById('prod-emoji').value = p.emoji || '';
+  document.getElementById('prod-desc').value = p.desc || '';
+  document.getElementById('product-modal-title').textContent = 'Edit Product';
+  openModal('product-modal');
+}
+
+async function saveProduct() {
+  const name = document.getElementById('prod-name').value.trim();
+  const price = parseInt(document.getElementById('prod-price').value) || 0;
+  if(!name || price <= 0) { toast('Valid Name and Sale Price required', 'error'); return; }
+
+  const data = {
+    name,
+    category: document.getElementById('prod-category').value,
+    price,
+    mrp: parseInt(document.getElementById('prod-mrp').value) || price,
+    unit: document.getElementById('prod-unit').value.trim() || '1 unit',
+    stock: parseInt(document.getElementById('prod-stock').value) || 0,
+    emoji: document.getElementById('prod-emoji').value.trim() || '🛒',
+    desc: document.getElementById('prod-desc').value.trim(),
+    id: name.toLowerCase().replace(/[^a-z0-9]+/g, '-') + '-' + Date.now().toString().slice(-4)
+  };
+
+  const editId = document.getElementById('product-edit-id').value;
+  if(editId) {
+    // Keep original ID if editing
+    const oldP = allProducts.find(x=>x._id===editId);
+    if(oldP && oldP.id) data.id = oldP.id;
+    
+    await db.collection('products').doc(editId).set(data, {merge:true});
+    const idx = allProducts.findIndex(x=>x._id===editId);
+    if(idx!==-1) allProducts[idx] = { _id:editId, ...data };
+    toast('Product updated');
+  } else {
+    const ref = await db.collection('products').add(data);
+    allProducts.unshift({ _id: ref.id, ...data });
+    toast('Product created');
+  }
+  closeModal('product-modal');
+  renderProductsTable();
+}
+
+async function deleteProduct(id) {
+  if(!confirm('Delete this product?')) return;
+  await db.collection('products').doc(id).delete();
+  allProducts = allProducts.filter(x => x._id !== id);
+  toast('Product deleted');
+  renderProductsTable();
+}
+
 
 // ===== HELPERS =====
 function statusBadge(s) {
