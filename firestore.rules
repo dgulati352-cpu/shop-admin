@@ -16,5 +16,23 @@ service cloud.firestore {
     match /products/{productId} {
       allow read, write: if true;
     }
+    match /categories/{catId} {
+      allow read, write: if true;
+    }
+    match /article_categories/{catId} {
+      allow read, write: if true;
+    }
+    match /counters/{counterId} {
+      allow read, write: if true;
+    }
+    match /settings/{settingId} {
+      allow read, write: if true;
+    }
+    match /banners/{bannerId} {
+      allow read, write: if true;
+    }
+    match /delivery_partners/{partnerId} {
+      allow read, write: if true;
+    }
   }
 }

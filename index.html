@@ -1,15 +1,23 @@
 <!DOCTYPE html>
 <html lang="en">
+
 <head>
   <meta charset="UTF-8">
   <meta name="viewport" content="width=device-width, initial-scale=1.0">
   <title>QuickShop Admin — Control Panel</title>
   <meta name="description" content="QuickShop Admin Dashboard — Manage orders, customers, promo codes, and articles.">
   <link rel="preconnect" href="https://fonts.googleapis.com">
-  <link href="https://fonts.googleapis.com/css2?family=Inter:wght@300;400;500;600;700;800;900&display=swap" rel="stylesheet">
+  <link href="https://fonts.googleapis.com/css2?family=Inter:wght@300;400;500;600;700;800;900&display=swap"
+    rel="stylesheet">
   <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.5.1/css/all.min.css">
   <link rel="stylesheet" href="styles.css">
+  <link rel="manifest" href="manifest.json">
+  <meta name="apple-mobile-web-app-capable" content="yes">
+  <meta name="apple-mobile-web-app-status-bar-style" content="default">
+  <meta name="apple-mobile-web-app-title" content="QS Admin">
+  <link rel="apple-touch-icon" href="assets/apple-touch-icon.png">
 </head>
+
 <body>
 
   <!-- Login Screen -->
@@ -22,16 +30,16 @@
       </div>
       <div class="input-group">
         <i class="fas fa-user-shield"></i>
-        <input type="email" id="admin-email" placeholder="Admin Email" value="admin@quickshop.com">
+        <input type="text" id="admin-email" placeholder="Username">
       </div>
       <div class="input-group">
         <i class="fas fa-lock"></i>
-        <input type="password" id="admin-password" placeholder="Password" value="admin123">
+        <input type="password" id="admin-password" placeholder="Password">
       </div>
       <button class="btn-login" onclick="adminLogin()">
         <i class="fas fa-sign-in-alt"></i> Sign In to Dashboard
       </button>
-      <p class="login-hint">Default: admin@quickshop.com / admin123</p>
+
     </div>
   </div>
 
@@ -56,17 +64,20 @@
         <a class="nav-item" id="nav-customers" onclick="goToSection('customers')">
           <i class="fas fa-users"></i><span>Customers</span>
         </a>
-        <a class="nav-item" id="nav-categories" onclick="goToSection('categories')">
-          <i class="fas fa-folder-open"></i><span>Categories</span>
+        <a class="nav-item" id="nav-deliveries" onclick="goToSection('deliveries')">
+          <i class="fas fa-truck"></i><span>Delivery Partners</span>
+        </a>
+        <a class="nav-item" id="nav-banners" onclick="goToSection('banners')">
+          <i class="fas fa-images"></i><span>Banners</span>
         </a>
         <a class="nav-item" id="nav-promos" onclick="goToSection('promos')">
           <i class="fas fa-tags"></i><span>Promo Codes</span>
         </a>
-        <a class="nav-item" id="nav-articles" onclick="goToSection('articles')">
-          <i class="fas fa-newspaper"></i><span>Articles</span>
-        </a>
         <a class="nav-item" id="nav-products" onclick="goToSection('products')">
           <i class="fas fa-box-open"></i><span>Products</span>
+        </a>
+        <a class="nav-item" id="nav-settings" onclick="goToSection('settings')">
+          <i class="fas fa-cog"></i><span>Settings</span>
         </a>
       </nav>
 
@@ -85,6 +96,9 @@
         <button class="hamburger" onclick="toggleSidebar()"><i class="fas fa-bars"></i></button>
         <div class="topbar-title" id="page-title">Dashboard</div>
         <div class="topbar-right">
+          <button id="install-app-btn" class="hidden" onclick="promptAppInstall()" style="background:var(--primary);color:white;border:none;border-radius:20px;padding:6px 12px;font-size:13px;font-weight:600;margin-right:12px;cursor:pointer;white-space:nowrap;">
+            <i class="fas fa-download"></i> Get App
+          </button>
           <div class="sync-status" id="sync-status">
             <i class="fas fa-circle"></i> Live
           </div>
@@ -185,6 +199,27 @@
         </div>
       </section>
 
+      <!-- ===== DELIVERY PARTNERS SECTION ===== -->
+      <section id="section-deliveries" class="section hidden">
+        <div class="section-header">
+          <h2>Delivery Partners</h2>
+          <div class="filter-row">
+            <select id="delivery-filter-status" onchange="renderDeliveriesTable()">
+              <option value="">All Statuses</option>
+              <option value="pending">Pending Approval</option>
+              <option value="approved">Approved</option>
+              <option value="rejected">Rejected</option>
+            </select>
+            <input type="text" id="delivery-search" placeholder="Search partners..." oninput="renderDeliveriesTable()">
+          </div>
+        </div>
+        <div class="card">
+          <div id="deliveries-table-container" class="table-wrapper">
+            <div class="loading-state"><i class="fas fa-spinner fa-spin"></i> Loading partners...</div>
+          </div>
+        </div>
+      </section>
+
       <!-- ===== CATEGORIES SECTION ===== -->
       <section id="section-categories" class="section hidden">
         <div class="section-header">
@@ -196,6 +231,21 @@
         <div class="card">
           <div id="categories-table-container" class="table-wrapper">
             <div class="loading-state"><i class="fas fa-spinner fa-spin"></i> Loading...</div>
+          </div>
+        </div>
+      </section>
+
+      <!-- ===== BANNERS SECTION ===== -->
+      <section id="section-banners" class="section hidden">
+        <div class="section-header">
+          <h2>Hero Banners</h2>
+          <button class="btn-primary" onclick="openBannerModal()">
+            <i class="fas fa-plus"></i> New Banner
+          </button>
+        </div>
+        <div class="card">
+          <div id="banners-table-container" class="table-wrapper">
+            <div class="loading-state"><i class="fas fa-spinner fa-spin"></i> Loading banners...</div>
           </div>
         </div>
       </section>
@@ -246,6 +296,82 @@
         </div>
       </section>
 
+      <!-- ===== SETTINGS SECTION ===== -->
+      <section id="section-settings" class="section hidden">
+        <div class="section-header">
+          <h2>Store Settings</h2>
+        </div>
+
+        <!-- Order Management -->
+        <div class="card" style="margin-bottom:20px;">
+          <div class="card-header">
+            <h3><i class="fas fa-shopping-bag"></i> Order Management</h3>
+          </div>
+          <div style="padding:20px;">
+            <p style="color:var(--text-muted);margin-bottom:16px;">Clear all orders from the database and reset the order counter back to #1.</p>
+            <button class="btn-primary" style="background:#ef4444;" onclick="clearAllOrders()">
+              <i class="fas fa-trash-alt"></i> Clear All Orders & Reset Counter
+            </button>
+            <p id="clear-orders-status" style="margin-top:12px;color:var(--text-muted);font-size:13px;"></p>
+          </div>
+        </div>
+
+        <!-- Checkout Settings -->
+        <div class="card" style="margin-bottom:20px;">
+          <div class="card-header">
+            <h3><i class="fas fa-mobile-alt"></i> Checkout Settings</h3>
+          </div>
+          <div style="padding:20px;">
+            <div style="display:flex;align-items:center;justify-content:space-between;margin-bottom:16px;">
+              <div>
+                <strong style="display:block;margin-bottom:4px;">Require App Install for Checkout</strong>
+                <span style="color:var(--text-muted);font-size:13px;">When enabled, customers must install the PWA app before placing an order.</span>
+              </div>
+              <label class="toggle-switch">
+                <input type="checkbox" id="setting-pwa-required" onchange="saveStoreSettings()">
+                <span class="toggle-slider"></span>
+              </label>
+            </div>
+            <div style="display:flex;align-items:center;justify-content:space-between;margin-bottom:16px;">
+              <div>
+                <strong style="display:block;margin-bottom:4px;">Delivery Fee (₹)</strong>
+                <span style="color:var(--text-muted);font-size:13px;">Fee charged for delivery below the free delivery threshold.</span>
+              </div>
+              <input type="number" id="setting-delivery-fee" value="25" style="width:80px;padding:8px;border:1px solid var(--border);border-radius:8px;background:var(--bg-input);color:var(--text);text-align:center;" onchange="saveStoreSettings()">
+            </div>
+            <div style="display:flex;align-items:center;justify-content:space-between;margin-bottom:16px;">
+              <div>
+                <strong style="display:block;margin-bottom:4px;">Free Delivery Above (₹)</strong>
+                <span style="color:var(--text-muted);font-size:13px;">Orders above this amount get free delivery.</span>
+              </div>
+              <input type="number" id="setting-free-delivery" value="300" style="width:80px;padding:8px;border:1px solid var(--border);border-radius:8px;background:var(--bg-input);color:var(--text);text-align:center;" onchange="saveStoreSettings()">
+            </div>
+            <div style="display:flex;align-items:center;justify-content:space-between;">
+              <div>
+                <strong style="display:block;margin-bottom:4px;">Delivery Time</strong>
+                <span style="color:var(--text-muted);font-size:13px;">Estimated delivery time shown to customers.</span>
+              </div>
+              <input type="text" id="setting-delivery-time" value="10 min" style="width:100px;padding:8px;border:1px solid var(--border);border-radius:8px;background:var(--bg-input);color:var(--text);text-align:center;" onchange="saveStoreSettings()">
+            </div>
+          </div>
+        </div>
+
+        <!-- Change Credentials -->
+        <div class="card" style="margin-bottom:20px;">
+          <div class="card-header">
+            <h3><i class="fas fa-user-shield"></i> Admin Credentials</h3>
+          </div>
+          <div style="padding:20px;">
+            <p style="color:var(--text-muted);margin-bottom:8px;">Current login: <strong id="current-creds-display">admin@quickshop.com</strong></p>
+            <p style="color:var(--text-muted);font-size:13px;margin-bottom:16px;">Change the username (email) and password used to sign in to this admin panel.</p>
+            <button class="btn-primary" onclick="openChangeCredentialsModal()">
+              <i class="fas fa-key"></i> Change Username &amp; Password
+            </button>
+          </div>
+        </div>
+
+      </section>
+
     </main>
   </div>
 
@@ -274,6 +400,54 @@
         <input type="hidden" id="category-edit-id">
         <button class="btn-primary" style="width:100%;margin-top:16px;" onclick="saveCategory()">
           <i class="fas fa-save"></i> Save Category
+        </button>
+      </div>
+    </div>
+  </div>
+
+  <!-- Banner Modal -->
+  <div id="banner-modal" class="modal hidden">
+    <div class="modal-content" style="max-width:500px;">
+      <div class="modal-header">
+        <h3><i class="fas fa-image"></i> <span id="banner-modal-title">New Banner</span></h3>
+        <button class="close-btn" onclick="closeModal('banner-modal')"><i class="fas fa-times"></i></button>
+      </div>
+      <div class="modal-body">
+        <div class="form-grid">
+          <div class="input-group" style="grid-column:1/-1;">
+            <i class="fas fa-heading"></i>
+            <input type="text" id="banner-title" placeholder="Banner Title (e.g. Super Fast Delivery!)">
+          </div>
+          <div class="input-group" style="grid-column:1/-1;">
+            <i class="fas fa-align-left"></i>
+            <input type="text" id="banner-desc" placeholder="Description (e.g. Get groceries in 10 minutes)">
+          </div>
+          <div class="input-group" style="grid-column:1/-1;">
+            <i class="fas fa-paint-brush"></i>
+            <input type="text" id="banner-bg" placeholder="Background CSS (e.g. linear-gradient(135deg, #10b981, #059669))">
+          </div>
+          <div style="grid-column:1/-1; display:flex; gap:8px; flex-wrap:wrap; margin-top:-8px;">
+            <div class="color-swatch" style="background: linear-gradient(135deg, #10b981, #059669);" onclick="setBannerBg('linear-gradient(135deg, #10b981, #059669)')"></div>
+            <div class="color-swatch" style="background: linear-gradient(135deg, #f59e0b, #d97706);" onclick="setBannerBg('linear-gradient(135deg, #f59e0b, #d97706)')"></div>
+            <div class="color-swatch" style="background: linear-gradient(135deg, #3b82f6, #2563eb);" onclick="setBannerBg('linear-gradient(135deg, #3b82f6, #2563eb)')"></div>
+            <div class="color-swatch" style="background: linear-gradient(135deg, #ef4444, #dc2626);" onclick="setBannerBg('linear-gradient(135deg, #ef4444, #dc2626)')"></div>
+            <div class="color-swatch" style="background: linear-gradient(135deg, #8b5cf6, #7c3aed);" onclick="setBannerBg('linear-gradient(135deg, #8b5cf6, #7c3aed)')"></div>
+            <div class="color-swatch" style="background: linear-gradient(135deg, #ec4899, #db2777);" onclick="setBannerBg('linear-gradient(135deg, #ec4899, #db2777)')"></div>
+            <div class="color-swatch" style="background: linear-gradient(135deg, #14b8a6, #0d9488);" onclick="setBannerBg('linear-gradient(135deg, #14b8a6, #0d9488)')"></div>
+            <div class="color-swatch" style="background: #1f2937;" onclick="setBannerBg('#1f2937')"></div>
+          </div>
+          <div class="input-group" style="grid-column:1/-1;">
+            <i class="fas fa-sort-numeric-down"></i>
+            <input type="number" id="banner-order" placeholder="Sort Order (e.g. 1)" value="1">
+          </div>
+        </div>
+        <div id="banner-preview" style="margin-top:16px; width:100%; height:80px; border-radius:12px; display:flex; flex-direction:column; justify-content:center; padding:0 20px; color:white; border:1px solid var(--border);">
+          <strong id="banner-preview-title" style="font-size:16px;">Title Preview</strong>
+          <small id="banner-preview-desc" style="font-size:12px; opacity:0.9;">Description Preview</small>
+        </div>
+        <input type="hidden" id="banner-edit-id">
+        <button class="btn-primary" style="width:100%;margin-top:16px;" onclick="saveBanner()">
+          <i class="fas fa-save"></i> Save Banner
         </button>
       </div>
     </div>
@@ -314,13 +488,56 @@
             <i class="fas fa-boxes"></i>
             <input type="number" id="prod-stock" placeholder="Stock Quantity">
           </div>
+
+          <!-- Multiple Sizes Option -->
+          <div style="grid-column: 1 / -1; margin: 10px 0; background: var(--bg-card); border: 1.5px solid var(--border); border-radius: 12px; padding: 16px;">
+            <label style="display: flex; align-items: center; gap: 10px; font-size: 14px; font-weight: 600; color: var(--text-primary); cursor: pointer; margin-bottom: 0; user-select: none;">
+              <input type="checkbox" id="prod-enable-sizes" onchange="toggleSizesSection()" style="width: 18px; height: 18px; accent-color: var(--primary); cursor: pointer;">
+              Enable Multiple Sizes / Weight Variants
+            </label>
+            
+            <div id="sizes-section" style="display: none; margin-top: 15px; border-top: 1.5px solid var(--border); padding-top: 15px;">
+              <p style="font-size: 12px; color: var(--text-muted); margin: 0 0 12px 0;">Define the size options for this product. If enabled, these options will override the main Price, MRP, and Stock values.</p>
+              
+              <div class="table-wrapper" style="overflow-x: auto; margin-bottom: 12px;">
+                <table style="width: 100%; border-collapse: collapse; font-size: 13px;">
+                  <thead>
+                    <tr style="border-bottom: 1.5px solid var(--border); text-align: left; color: var(--text-muted);">
+                      <th style="padding: 8px 4px;">Size (e.g. S, L, 1 Kg)</th>
+                      <th style="padding: 8px 4px; width: 100px;">Sale Price (₹)</th>
+                      <th style="padding: 8px 4px; width: 100px;">MRP (₹)</th>
+                      <th style="padding: 8px 4px; width: 80px;">Stock</th>
+                      <th style="padding: 8px 4px; text-align: center; width: 50px;">Remove</th>
+                    </tr>
+                  </thead>
+                  <tbody id="sizes-tbody">
+                    <!-- Dynamic size rows -->
+                  </tbody>
+                </table>
+              </div>
+              
+              <button type="button" onclick="addSizeRow()" style="padding: 8px 14px; font-size: 13px; border-radius: 8px; width: auto; background: var(--primary); color: white; border: none; cursor: pointer; display: inline-flex; align-items: center; gap: 6px;">
+                <i class="fas fa-plus-circle"></i> Add Size / Variant
+              </button>
+            </div>
+          </div>
+
           <div class="input-group" style="grid-column:1/-1;">
-            <i class="fas fa-smile"></i>
-            <input type="text" id="prod-emoji" placeholder="Emoji (e.g. 🍎)">
+            <i class="fas fa-image"></i>
+            <input type="text" id="prod-image" placeholder="Image URL (optional) or Drop Image Below" style="flex:1;">
+          </div>
+          <div id="prod-image-drop-zone" class="drop-zone" style="grid-column:1/-1; border: 2px dashed var(--border); border-radius: 10px; padding: 30px; text-align: center; color: var(--text-muted); cursor: pointer; transition: all 0.2s; background: var(--bg-input);">
+            <i class="fas fa-cloud-upload-alt" style="font-size: 24px; margin-bottom: 10px; color: var(--primary);"></i>
+            <p style="margin:0; font-size: 14px;">Drag & Drop a product image here or click to browse</p>
+            <input type="file" id="prod-file-input" accept="image/*" style="display: none;">
+            <div id="prod-upload-progress" style="display: none; margin-top: 10px; font-size: 12px; color: var(--primary);">Uploading... 0%</div>
+            <img id="prod-image-preview" style="display: none; max-width: 100%; max-height: 150px; margin-top: 15px; border-radius: 8px; object-fit: contain;">
           </div>
           <div style="grid-column:1/-1;">
-            <label style="font-size:13px;font-weight:600;color:var(--text-muted);display:block;margin-bottom:8px;">Description</label>
-            <textarea id="prod-desc" rows="3" placeholder="Product description..." style="width:100%;padding:14px;border:1.5px solid var(--border);border-radius:10px;font-family:inherit;font-size:14px;resize:vertical;background:var(--bg-input);color:var(--text-primary);outline:none;box-sizing:border-box;"></textarea>
+            <label
+              style="font-size:13px;font-weight:600;color:var(--text-muted);display:block;margin-bottom:8px;">Description</label>
+            <textarea id="prod-desc" rows="3" placeholder="Product description..."
+              style="width:100%;padding:14px;border:1.5px solid var(--border);border-radius:10px;font-family:inherit;font-size:14px;resize:vertical;background:var(--bg-input);color:var(--text-primary);outline:none;box-sizing:border-box;"></textarea>
           </div>
         </div>
         <input type="hidden" id="product-edit-id">
@@ -395,27 +612,38 @@
           </div>
           <div class="input-group" style="grid-column:1/-1;">
             <i class="fas fa-tag"></i>
-            <select id="article-category" style="width: 100%; border: none; background: none; outline: none; color: var(--text-primary); font-family: inherit; font-size: 14px; padding: 13px 0;">
-              <option value="Offers">Offers</option>
-              <option value="News">News</option>
-              <option value="Tips">Tips</option>
-              <option value="General">General</option>
+            <select id="article-category"
+              style="width: 100%; border: none; background: none; outline: none; color: var(--text-primary); font-family: inherit; font-size: 14px; padding: 13px 0;">
+              <option value="Sauces">Sauces</option>
+              <option value="Frozen">Frozen</option>
+              <option value="Seasoning">Seasoning</option>
+              <option value="Cakes Decorating">Cakes Decorating</option>
+              <option value="Cake Mould">Cake Mould</option>
+              <option value="Cake Premix">Cake Premix</option>
+              <option value="Coffees">Coffees</option>
+              <option value="Mojitos">Mojitos</option>
             </select>
           </div>
           <div class="input-group" style="grid-column:1/-1;">
             <i class="fas fa-image"></i>
-            <input type="text" id="article-image" placeholder="Image URL (optional) or Drop Image Below" style="flex:1;">
+            <input type="text" id="article-image" placeholder="Image URL (optional) or Drop Image Below"
+              style="flex:1;">
           </div>
-          <div id="image-drop-zone" class="drop-zone" style="grid-column:1/-1; border: 2px dashed var(--border); border-radius: 10px; padding: 30px; text-align: center; color: var(--text-muted); cursor: pointer; transition: all 0.2s; background: var(--bg-input);">
+          <div id="image-drop-zone" class="drop-zone"
+            style="grid-column:1/-1; border: 2px dashed var(--border); border-radius: 10px; padding: 30px; text-align: center; color: var(--text-muted); cursor: pointer; transition: all 0.2s; background: var(--bg-input);">
             <i class="fas fa-cloud-upload-alt" style="font-size: 24px; margin-bottom: 10px; color: var(--primary);"></i>
             <p style="margin:0; font-size: 14px;">Drag & Drop an image here or click to browse</p>
             <input type="file" id="article-file-input" accept="image/*" style="display: none;">
-            <div id="upload-progress" style="display: none; margin-top: 10px; font-size: 12px; color: var(--primary);">Uploading... 0%</div>
-            <img id="image-preview" style="display: none; max-width: 100%; max-height: 150px; margin-top: 15px; border-radius: 8px; object-fit: contain;">
+            <div id="upload-progress" style="display: none; margin-top: 10px; font-size: 12px; color: var(--primary);">
+              Uploading... 0%</div>
+            <img id="image-preview"
+              style="display: none; max-width: 100%; max-height: 150px; margin-top: 15px; border-radius: 8px; object-fit: contain;">
           </div>
           <div style="grid-column:1/-1;">
-            <label style="font-size:13px;font-weight:600;color:var(--text-muted);display:block;margin-bottom:8px;">Content</label>
-            <textarea id="article-content" rows="6" placeholder="Write your article content here..." style="width:100%;padding:14px;border:1.5px solid var(--border);border-radius:10px;font-family:inherit;font-size:14px;resize:vertical;background:var(--bg-input);color:var(--text-primary);outline:none;transition:border 0.2s;box-sizing:border-box;"></textarea>
+            <label
+              style="font-size:13px;font-weight:600;color:var(--text-muted);display:block;margin-bottom:8px;">Content</label>
+            <textarea id="article-content" rows="6" placeholder="Write your article content here..."
+              style="width:100%;padding:14px;border:1.5px solid var(--border);border-radius:10px;font-family:inherit;font-size:14px;resize:vertical;background:var(--bg-input);color:var(--text-primary);outline:none;transition:border 0.2s;box-sizing:border-box;"></textarea>
           </div>
           <div class="input-group">
             <i class="fas fa-user-edit"></i>
@@ -448,11 +676,82 @@
     </div>
   </div>
 
+  <!-- Change Credentials Modal -->
+  <div id="credentials-modal" class="modal hidden">
+    <div class="modal-content" style="max-width:480px;">
+      <div class="modal-header">
+        <h3><i class="fas fa-user-shield"></i> Change Admin Credentials</h3>
+        <button class="close-btn" onclick="closeModal('credentials-modal')"><i class="fas fa-times"></i></button>
+      </div>
+      <div class="modal-body">
+        <p style="color:var(--text-muted);font-size:13px;margin-bottom:20px;">You must enter your current password to make changes. Leave the new password fields blank to keep your existing password.</p>
+
+        <div class="form-grid">
+          <!-- Current Password -->
+          <div class="input-group" style="grid-column:1/-1;">
+            <i class="fas fa-lock"></i>
+            <input type="password" id="current-admin-pass-verify" placeholder="Current Password (required)">
+            <button type="button" onclick="togglePassVis('current-admin-pass-verify',this)" style="background:none;border:none;cursor:pointer;color:var(--text-muted);padding:0 4px;"><i class="fas fa-eye"></i></button>
+          </div>
+
+          <!-- New Username / Email -->
+          <div class="input-group" style="grid-column:1/-1;">
+            <i class="fas fa-user"></i>
+            <input type="text" id="new-admin-email" placeholder="New Username / Email">
+          </div>
+
+          <!-- New Password -->
+          <div class="input-group" style="grid-column:1/-1;">
+            <i class="fas fa-key"></i>
+            <input type="password" id="new-admin-pass" placeholder="New Password (leave blank to keep current)">
+            <button type="button" onclick="togglePassVis('new-admin-pass',this)" style="background:none;border:none;cursor:pointer;color:var(--text-muted);padding:0 4px;"><i class="fas fa-eye"></i></button>
+          </div>
+
+          <!-- Confirm New Password -->
+          <div class="input-group" style="grid-column:1/-1;">
+            <i class="fas fa-key"></i>
+            <input type="password" id="new-admin-pass-confirm" placeholder="Confirm New Password">
+            <button type="button" onclick="togglePassVis('new-admin-pass-confirm',this)" style="background:none;border:none;cursor:pointer;color:var(--text-muted);padding:0 4px;"><i class="fas fa-eye"></i></button>
+          </div>
+        </div>
+
+        <button class="btn-primary" style="width:100%;margin-top:20px;" onclick="saveCredentials()">
+          <i class="fas fa-save"></i> Save Changes
+        </button>
+      </div>
+    </div>
+  </div>
+
+
+  <div id="ios-install-modal" class="modal hidden">
+    <div class="modal-content" style="text-align:center; padding: 40px 20px;">
+      <h2 style="margin-bottom: 16px;">Install QS Admin</h2>
+      <p style="color: var(--text-muted); margin-bottom: 24px;">Install this app on your device to manage your store easily.</p>
+      <div style="background: var(--bg-input); padding: 20px; border-radius: 12px; text-align: left; margin-bottom: 24px;">
+        <p style="margin: 0 0 12px 0;"><strong>1.</strong> Tap the <strong>Share</strong> icon <i class="fas fa-share-square" style="color: var(--primary);"></i> at the bottom of the screen.</p>
+        <p style="margin: 0;"><strong>2.</strong> Scroll down and tap <strong>Add to Home Screen</strong> <i class="fas fa-plus-square" style="color: var(--primary);"></i>.</p>
+      </div>
+      <button class="btn-primary" onclick="document.getElementById('ios-install-modal').classList.add('hidden')">Got it!</button>
+    </div>
+  </div>
+
   <!-- Firebase SDKs -->
   <script src="https://www.gstatic.com/firebasejs/10.9.0/firebase-app-compat.js"></script>
   <script src="https://www.gstatic.com/firebasejs/10.9.0/firebase-auth-compat.js"></script>
   <script src="https://www.gstatic.com/firebasejs/10.9.0/firebase-firestore-compat.js"></script>
   <script src="https://www.gstatic.com/firebasejs/10.9.0/firebase-storage-compat.js"></script>
+  
+  <script>
+    if ('serviceWorker' in navigator) {
+      window.addEventListener('load', () => {
+        navigator.serviceWorker.register('/sw.js').catch(err => {
+          console.warn('Service worker registration failed:', err);
+        });
+      });
+    }
+  </script>
+  
   <script src="app.js"></script>
 </body>
+
 </html>

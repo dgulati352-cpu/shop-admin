@@ -6,5 +6,8 @@
     "dev": "npx -y serve .",
     "start": "npx -y serve ."
   },
-  "license": "ISC"
+  "license": "ISC",
+  "dependencies": {
+    "sharp": "^0.35.1"
+  }
 }
